@@ -51,3 +51,59 @@ def parse_json(data):
 ######################################################################
 # INSERT CODE HERE
 ######################################################################
+@app.route('/health')
+def health():
+    """
+    Health check endpoint
+    """
+    return jsonify(status="OK"), 200
+
+@app.route('/count')
+def count():
+    """
+    Returns songs list length
+    """
+    return jsonify(count=len(songs_list))
+
+@app.route('/song')
+def get_songs():
+    """
+    Returns documents in songs collection
+    """
+    songs_in_collection = json.loads(json_util.dumps(list(db.songs.find({}))))
+
+    if songs_in_collection:
+        return jsonify(songs=songs_in_collection), 200
+    
+    return jsonify(message="Empty collection"), 400
+
+
+@app.route('/song/<int:song_id>')
+def get_song_by_id(song_id):
+    """
+    Returns one song in songs collection
+    """
+    res = db.songs.find_one({"id": song_id})
+    song = parse_json(res)
+
+    if song:
+        return song, 200
+    
+    return jsonify(message=f"Song {song_id} not found"), 404
+
+@app.route('/song', methods = ['POST'])
+def create_song():
+    """
+    Adds a new song
+    """
+    new_song = parse_json(request.get_json())
+    print(new_song)
+    if new_song:
+        found_res = parse_json(db.songs.find({"id": new_song["id"]}))
+        if found_res:
+            return jsonify(Message=f"song with id {new_song['id']} already present"), 302
+
+        res = db.songs.insert_one(new_song)
+        return {"inserted id": parse_json(res.inserted_id) }, 201
+    
+    return jsonify(Message="Uknown error"), 400        
