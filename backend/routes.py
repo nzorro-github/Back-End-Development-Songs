@@ -97,7 +97,6 @@ def create_song():
     Adds a new song
     """
     new_song = parse_json(request.get_json())
-    print(new_song)
     if new_song:
         found_res = parse_json(db.songs.find({"id": new_song["id"]}))
         if found_res:
@@ -106,4 +105,39 @@ def create_song():
         res = db.songs.insert_one(new_song)
         return {"inserted id": parse_json(res.inserted_id) }, 201
     
-    return jsonify(Message="Uknown error"), 400        
+    return jsonify(Message="Uknown error"), 400
+
+@app.route('/song/<int:song_id>', methods = ['PUT'])
+def update_song(song_id):
+    """
+    Updates existing song
+    """
+    new_song = parse_json(request.get_json())
+    print(new_song)
+    if new_song:
+        found_res = parse_json(db.songs.find_one({"id": song_id}))
+        if found_res:
+            res = db.songs.update_one({"id": song_id}, {'$set': new_song})
+            # if nothing changed notify
+            if res.modified_count == 0:
+                return jsonify(message = "song found, but nothing updated"), 200
+
+            return parse_json(db.songs.find_one(res.upserted_id)), 201
+
+        return jsonify(message="song not found"), 404
+    
+    return jsonify(Message="Uknown error"), 400
+
+@app.route('/song/<int:song_id>', methods = ['DELETE'])
+def delete_song(song_id):
+    """
+    Deletes song with song_id
+    """
+    found_res = parse_json(db.songs.find_one({"id": song_id}))
+    if not found_res:
+        return jsonify(message = "song not found"), 404
+    result = db.songs.delete_one({"id": song_id})
+    if result.deleted_count:
+        return {}, 204
+    
+    return jsonify(Message="nothing to delete"), 400
